@@ -2,10 +2,7 @@
 
 Solana Telegram bot for tracking wallet which interact with pump.fun
 
-<video width="600" controls>
-  <source src="wallet tracking.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
+https://drive.google.com/file/d/1M9n0K-FtxMMSh0bxTx-VMSwQGG8TrzrA/view?usp=drive_link
 
 ## Main Features
 
