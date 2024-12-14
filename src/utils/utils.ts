@@ -1,4 +1,7 @@
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+import fs from "fs";
+import path from "path";
+import { DB_PATH, LOGFILE } from "../config/config";
 
 export async function getTransactionDetails(
   connection: any,
@@ -46,4 +49,34 @@ export async function getTransactionDetails(
 
 export const txnLink = (txn: string) => {
   return `<a href="https://solscan.io/tx/${txn}">Txn</a>`;
+};
+
+export const shortenAddress = (address: string, chars = 4): string => {
+  return `${address.slice(0, chars)}...${address.slice(-chars)}`;
+};
+
+export const shortenAddressWithLink = (address: string, chars = 4): string => {
+  return `<a href="https://solscan.io/account/${address}">${shortenAddress(
+    address,
+    chars
+  )}</a>`;
+};
+
+export const clearLogs = () => {
+  // Clear the log file at startup
+  const logPath = path.join(process.cwd(), LOGFILE);
+  if (fs.existsSync(logPath)) {
+    fs.writeFileSync(logPath, ""); // Write empty string to clear the file
+    console.log("wallet_tracker.log cleared successfully");
+  }
+};
+
+export const clearDB = () => {
+  const dbPath = path.join(process.cwd(), DB_PATH);
+
+  if (fs.existsSync(dbPath)) {
+    console.log(`${DB_PATH} found, removing...`);
+    fs.unlinkSync(dbPath);
+    console.log(`${DB_PATH} removed successfully`);
+  }
 };

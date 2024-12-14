@@ -9,3 +9,10 @@ export const TELEGRAM_CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID || "";
 export const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || "";
 
 export const TRACKED_WALLETS_SIZE = 100;
+
+// log file
+export const LOGFILE = "wallet_tracker.log";
+export const LOG_MAX_SIZE = 1024 * 1024; // 1MB in bytes
+
+// db
+export const DB_PATH = "wallets.db";
