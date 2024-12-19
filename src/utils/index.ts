@@ -1,16 +1,12 @@
-import {
-  AccountInfo,
-  Connection,
-  LAMPORTS_PER_SOL,
-  PublicKey,
-} from "@solana/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import { Database } from "sqlite3";
 import TelegramBot from "node-telegram-bot-api";
 import {
   DB_PATH,
   LOG_MAX_SIZE,
   LOGFILE,
-  MAIN_WALLET_ADDRESS,
+  MAIN_WALLET_ADDRESS_1,
+  MAIN_WALLET_ADDRESS_2,
   PUMP_FUN_ADDRESS,
   SOLANA_RPC_URL,
   TELEGRAM_BOT_TOKEN,
@@ -19,7 +15,6 @@ import {
 } from "../config/config";
 import {
   getTransactionDetails,
-  shortenAddress,
   shortenAddressWithLink,
   txnLink,
 } from "./utils";
@@ -34,27 +29,30 @@ export class WalletTracker {
   private connection: Connection;
   private db: Database;
   private bot: TelegramBot;
-  private trackedWallets: Map<string, WalletTrack>;
+  private trackedWallets_1: Map<string, WalletTrack>; // this is from wallet 1
+  private trackedWallets_2: Map<string, WalletTrack>; // this is from wallet 2
 
   constructor() {
     this.connection = new Connection(SOLANA_RPC_URL);
     this.db = new Database(DB_PATH);
     const BOT_TOKEN = TELEGRAM_BOT_TOKEN || "";
     this.bot = new TelegramBot(BOT_TOKEN, { polling: false });
-    this.trackedWallets = new Map();
-    this.initDatabase();
-    this.loadTrackedWallets();
+    this.trackedWallets_1 = new Map();
+    this.trackedWallets_2 = new Map();
+    // this.initDatabase();
+    // this.loadTrackedWallets(1);
+    // this.loadTrackedWallets(2);
   }
 
-  private initDatabase(): void {
-    this.db.run(`
-            CREATE TABLE IF NOT EXISTS tracked_wallets (
-                address TEXT PRIMARY KEY,
-                timestamp INTEGER
-            )
-        `);
-  }
-  private saveLog(message: string): void {
+  // private initDatabase(): void {
+  //   this.db.run(`
+  //           CREATE TABLE IF NOT EXISTS tracked_wallets (
+  //               address TEXT PRIMARY KEY,
+  //               timestamp INTEGER
+  //           )
+  //       `);
+  // }
+  public saveLog(message: string): void {
     const logFile = LOGFILE;
     const maxSize = LOG_MAX_SIZE;
     // Check current file size
@@ -70,44 +68,67 @@ export class WalletTracker {
     fs.appendFileSync(logFile, logMessage);
   }
 
-  private loadTrackedWallets(): void {
-    this.db.all("SELECT * FROM tracked_wallets", (err, rows: WalletTrack[]) => {
-      if (err) {
-        console.error("Error loading wallets:", err);
-        return;
-      }
-      rows.forEach((row) => {
-        this.trackedWallets.set(row.address, row);
-      });
-    });
-  }
+  // private loadTrackedWallets(wallet_id: number): void {
+  //   this.db.all("SELECT * FROM tracked_wallets", (err, rows: WalletTrack[]) => {
+  //     if (err) {
+  //       console.error("Error loading wallets:", err);
+  //       return;
+  //     }
+  //     rows.forEach((row) => {
+  //       if (wallet_id === 1) {
+  //         this.trackedWallets_1.set(row.address, row);
+  //       } else {
+  //         this.trackedWallets_2.set(row.address, row);
+  //       }
+  //     });
+  //   });
+  // }
 
-  private async trackNewWallet(address: string): Promise<void> {
+  private async trackNewWallet(
+    wallet_id: number,
+    address: string
+  ): Promise<void> {
     const timestamp = Date.now();
-    this.db.run(
-      "INSERT INTO tracked_wallets (address, timestamp) VALUES (?, ?)",
-      [address, timestamp]
-    );
-    this.trackedWallets.set(address, { address, timestamp });
+    // this.db.run(
+    //   "INSERT INTO tracked_wallets (address, timestamp) VALUES (?, ?)",
+    //   [address, timestamp]
+    // );
+    if (wallet_id === 1)
+      this.trackedWallets_1.set(address, { address, timestamp });
+    if (wallet_id === 2)
+      this.trackedWallets_2.set(address, { address, timestamp });
   }
-  private async trackUpdateWallet(address: string): Promise<void> {
+  private async trackUpdateWallet(
+    wallet_id: number,
+    address: string
+  ): Promise<void> {
     const timestamp = Date.now();
-    this.db.run("UPDATE tracked_wallets SET timestamp = ? WHERE address = ?", [
-      timestamp,
-      address,
-    ]);
-    this.trackedWallets.set(address, {
-      address: address,
-      timestamp,
-    });
+    // this.db.run("UPDATE tracked_wallets SET timestamp = ? WHERE address = ?", [
+    //   timestamp,
+    //   address,
+    // ]);
+    if (wallet_id === 1)
+      this.trackedWallets_1.set(address, {
+        address: address,
+        timestamp,
+      });
+
+    if (wallet_id === 2)
+      this.trackedWallets_2.set(address, {
+        address: address,
+        timestamp,
+      });
   }
 
   private async sendTelegramNotification(
+    main_wallet: string,
     walletAddress: string,
     signature: string
   ): Promise<void> {
     const message = `🚨 ${shortenAddressWithLink(
       walletAddress
+    )} from ${shortenAddressWithLink(
+      main_wallet
     )} has interacted with pump.fun. | ${txnLink(signature)}
     `;
     console.log(message);
@@ -121,16 +142,11 @@ export class WalletTracker {
     }
   }
 
-  private shouldTrackWallet(timestamp: number): boolean {
-    const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
-    return Date.now() - timestamp < twoDaysMs;
-  }
-
   public async monitorTransactions(): Promise<void> {
-    // Monitor main wallet
+    // Monitor main wallet 1
     try {
       this.connection.onLogs(
-        new PublicKey(MAIN_WALLET_ADDRESS),
+        new PublicKey(MAIN_WALLET_ADDRESS_1),
         async ({ logs, err, signature }) => {
           if (err) return;
 
@@ -150,15 +166,19 @@ export class WalletTracker {
                   instruction.type === "transfer" &&
                   newTrackedWalletAddress
                 ) {
-                  if (this.trackedWallets.has(newTrackedWalletAddress)) {
-                    await this.trackUpdateWallet(newTrackedWalletAddress);
+                  if (this.trackedWallets_1.has(newTrackedWalletAddress)) {
+                    await this.trackUpdateWallet(1, newTrackedWalletAddress);
                     continue;
                   }
-                  if (this.trackedWallets.size >= TRACKED_WALLETS_SIZE) {
-                    console.log("Max tracked wallets reached. Skipping...");
+                  if (this.trackedWallets_1.size >= TRACKED_WALLETS_SIZE) {
+                    console.log(
+                      "Main wallet 1 tracked limited wallets. Skipping..."
+                    );
                     continue;
                   }
-                  await this.trackNewWallet(newTrackedWalletAddress);
+                  await this.trackNewWallet(1, newTrackedWalletAddress);
+
+                  // monitor small wallet from main wallet 1
                   this.connection.onLogs(
                     new PublicKey(newTrackedWalletAddress),
                     async ({ logs, err, signature }) => {
@@ -168,6 +188,7 @@ export class WalletTracker {
 
                       if (logs.some((log) => log.includes(PUMP_FUN_ADDRESS))) {
                         await this.sendTelegramNotification(
+                          MAIN_WALLET_ADDRESS_1,
                           newTrackedWalletAddress,
                           signature
                         );
@@ -182,8 +203,72 @@ export class WalletTracker {
         "confirmed"
       );
     } catch (error) {
-      console.log("Error monitoring transactions:", error);
-      this.saveLog("Error monitoring transactions");
+      console.log("Error monitoring 1 transactions:", error);
+      this.saveLog("Error monitoring 1 transactions");
+    }
+
+    // Monitor main wallet 2
+    try {
+      this.connection.onLogs(
+        new PublicKey(MAIN_WALLET_ADDRESS_2),
+        async ({ logs, err, signature }) => {
+          if (err) return;
+
+          const data = await getTransactionDetails(this.connection, signature);
+          console.log("Data:", data?.signature);
+          this.saveLog(`Main wallet txn: ${data?.signature}`);
+
+          if (data?.balanceChange) {
+            const balanceValue = parseFloat(
+              data.balanceChange.replace(" SOL", "")
+            );
+            if (Math.abs(balanceValue) < 25) {
+              for (const instruction of data?.instructions) {
+                const newTrackedWalletAddress = instruction.receiver;
+                if (
+                  instruction.program === "system" &&
+                  instruction.type === "transfer" &&
+                  newTrackedWalletAddress
+                ) {
+                  if (this.trackedWallets_2.has(newTrackedWalletAddress)) {
+                    await this.trackUpdateWallet(2, newTrackedWalletAddress);
+                    continue;
+                  }
+                  if (this.trackedWallets_2.size >= TRACKED_WALLETS_SIZE) {
+                    console.log(
+                      "Main wallet 2 tracked limited wallets. Skipping..."
+                    );
+                    continue;
+                  }
+                  await this.trackNewWallet(2, newTrackedWalletAddress);
+
+                  // monitor small wallet from main wallet 2
+                  this.connection.onLogs(
+                    new PublicKey(newTrackedWalletAddress),
+                    async ({ logs, err, signature }) => {
+                      if (err) return;
+                      console.log(`${newTrackedWalletAddress} Logs:`);
+                      this.saveLog(`${newTrackedWalletAddress} Logs: ${logs}`);
+
+                      if (logs.some((log) => log.includes(PUMP_FUN_ADDRESS))) {
+                        await this.sendTelegramNotification(
+                          MAIN_WALLET_ADDRESS_2,
+                          newTrackedWalletAddress,
+                          signature
+                        );
+                      }
+                    }
+                  );
+                }
+              }
+            }
+          }
+        },
+        "confirmed"
+      );
+    } catch (error) {
+      console.log("Error monitoring 2 transactions:", error);
+      this.saveLog("Error monitoring 2 transactions");
     }
   }
 
