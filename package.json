@@ -14,7 +14,7 @@
     "wallet",
     "tracking"
   ],
-  "author": "acmicpc0614",
+  "author": "rizzolib",
   "license": "ISC",
   "description": "A Telegram bot for tracking Solana wallet transactions.",
   "devDependencies": {
@@ -26,6 +26,7 @@
     "typescript": "^5.7.2"
   },
   "dependencies": {
+    "@metaplex-foundation/js": "^0.20.1",
     "@solana/web3.js": "^1.95.8",
     "base58": "^2.0.1",
     "dotenv": "^16.4.7",
