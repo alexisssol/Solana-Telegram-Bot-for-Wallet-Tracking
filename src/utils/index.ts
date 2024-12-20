@@ -14,6 +14,10 @@ import {
   TRACKED_WALLETS_SIZE,
 } from "../config/config";
 import {
+  birdeyeLink,
+  dextoolLink,
+  getSignature2CA,
+  getTokenInfo,
   getTransactionDetails,
   shortenAddressWithLink,
   txnLink,
@@ -32,6 +36,8 @@ export class WalletTracker {
   private trackedWallets_1: Map<string, WalletTrack>; // this is from wallet 1
   private trackedWallets_2: Map<string, WalletTrack>; // this is from wallet 2
 
+  private pumpfunTokens: Map<string, number>;
+
   constructor() {
     this.connection = new Connection(SOLANA_RPC_URL);
     this.db = new Database(DB_PATH);
@@ -39,6 +45,8 @@ export class WalletTracker {
     this.bot = new TelegramBot(BOT_TOKEN, { polling: false });
     this.trackedWallets_1 = new Map();
     this.trackedWallets_2 = new Map();
+
+    this.pumpfunTokens = new Map();
     // this.initDatabase();
     // this.loadTrackedWallets(1);
     // this.loadTrackedWallets(2);
@@ -121,17 +129,29 @@ export class WalletTracker {
   }
 
   private async sendTelegramNotification(
-    main_wallet: string,
+    symbol: string,
+    mc: string,
     walletAddress: string,
+    ca: string,
     signature: string
   ): Promise<void> {
-    const message = `🚨 ${shortenAddressWithLink(
-      walletAddress
-    )} from ${shortenAddressWithLink(
-      main_wallet
-    )} has interacted with pump.fun. | ${txnLink(signature)}
-    `;
-    console.log(message);
+    // const message = `🔗 ${shortenAddressWithLink(
+    //   walletAddress
+    // )} has interacted with pump.fun. | ${txnLink(
+    //   signature
+    // )} | ${shortenAddressWithLink(ca)}
+    // `;
+
+    const message = `🔗 ${shortenAddressWithLink(
+      ca,
+      symbol
+    )} | <code>MC: $${mc}</code> | ${birdeyeLink(ca)} | ${dextoolLink(
+      ca
+    )} | ${txnLink(signature)}
+      <code>${ca}</code>
+      `;
+    // console.log(message);
+
     try {
       await this.bot.sendMessage(TELEGRAM_CHANNEL_ID, message, {
         parse_mode: "HTML",
@@ -151,7 +171,7 @@ export class WalletTracker {
           if (err) return;
 
           const data = await getTransactionDetails(this.connection, signature);
-          console.log("Data:", data?.signature);
+          console.log("1 Data:", data?.signature);
           this.saveLog(`Main wallet txn: ${data?.signature}`);
 
           if (data?.balanceChange) {
@@ -185,13 +205,33 @@ export class WalletTracker {
                       if (err) return;
                       console.log(`${newTrackedWalletAddress} Logs:`);
                       this.saveLog(`${newTrackedWalletAddress} Logs: ${logs}`);
-
-                      if (logs.some((log) => log.includes(PUMP_FUN_ADDRESS))) {
-                        await this.sendTelegramNotification(
-                          MAIN_WALLET_ADDRESS_1,
-                          newTrackedWalletAddress,
-                          signature
-                        );
+                      const CA = await getSignature2CA(
+                        this.connection,
+                        signature
+                      );
+                      console.log("CA:", CA);
+                      this.saveLog(`CA: ${CA}`);
+                      if (CA) {
+                        const CA_ADDRESS = CA.toString();
+                        if (
+                          this.pumpfunTokens.get(CA_ADDRESS) === 2 ||
+                          this.pumpfunTokens.get(CA_ADDRESS) === 3
+                        ) {
+                          const { symbol, mc } = await getTokenInfo(
+                            this.connection,
+                            CA_ADDRESS
+                          );
+                          await this.sendTelegramNotification(
+                            symbol,
+                            mc,
+                            newTrackedWalletAddress,
+                            CA_ADDRESS,
+                            signature
+                          );
+                          this.pumpfunTokens.set(CA_ADDRESS, 3);
+                        } else {
+                          this.pumpfunTokens.set(CA_ADDRESS, 1);
+                        }
                       }
                     }
                   );
@@ -215,7 +255,7 @@ export class WalletTracker {
           if (err) return;
 
           const data = await getTransactionDetails(this.connection, signature);
-          console.log("Data:", data?.signature);
+          console.log("2 Data:", data?.signature);
           this.saveLog(`Main wallet txn: ${data?.signature}`);
 
           if (data?.balanceChange) {
@@ -249,13 +289,32 @@ export class WalletTracker {
                       if (err) return;
                       console.log(`${newTrackedWalletAddress} Logs:`);
                       this.saveLog(`${newTrackedWalletAddress} Logs: ${logs}`);
+                      const CA = await getSignature2CA(
+                        this.connection,
+                        signature
+                      );
 
-                      if (logs.some((log) => log.includes(PUMP_FUN_ADDRESS))) {
-                        await this.sendTelegramNotification(
-                          MAIN_WALLET_ADDRESS_2,
-                          newTrackedWalletAddress,
-                          signature
-                        );
+                      if (CA) {
+                        const CA_ADDRESS = CA.toString();
+                        if (
+                          this.pumpfunTokens.get(CA_ADDRESS) === 1 ||
+                          this.pumpfunTokens.get(CA_ADDRESS) === 3
+                        ) {
+                          const { symbol, mc } = await getTokenInfo(
+                            this.connection,
+                            CA_ADDRESS
+                          );
+                          await this.sendTelegramNotification(
+                            symbol,
+                            mc,
+                            newTrackedWalletAddress,
+                            CA_ADDRESS,
+                            signature
+                          );
+                          this.pumpfunTokens.set(CA_ADDRESS, 3);
+                        } else {
+                          this.pumpfunTokens.set(CA_ADDRESS, 2);
+                        }
                       }
                     }
                   );
