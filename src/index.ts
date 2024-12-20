@@ -1,14 +1,21 @@
 import { WalletTracker } from "./utils";
-import fs from "fs";
-import path from "path";
-import { DB_PATH } from "./config/config";
+
 import { clearDB, clearLogs } from "./utils/utils";
 async function main() {
-  // Delete the .db file if it exists
-  clearDB();
-  clearLogs();
   const tracker = new WalletTracker();
-  await tracker.start();
+  try {
+    // clearDB();
+    clearLogs();
+    await tracker.start();
+  } catch (error) {
+    tracker.saveLog(`Error starting wallet tracker: ${error} `);
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    main();
+  }
 }
 
-main().catch(console.error);
+main().catch((error) => {
+  console.error("Main process error:", error);
+  console.log("Restarting in 3 seconds...");
+  setTimeout(main, 3000);
+});
