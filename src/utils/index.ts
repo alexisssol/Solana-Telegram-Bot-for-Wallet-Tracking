@@ -211,9 +211,15 @@ export class WalletTracker {
                       );
                       console.log("CA:", CA);
                       this.saveLog(`CA: ${CA}`);
+
                       if (CA) {
                         const CA_ADDRESS = CA.toString();
                         if (
+                          CA_ADDRESS === MAIN_WALLET_ADDRESS_1 ||
+                          CA_ADDRESS === MAIN_WALLET_ADDRESS_2
+                        ) {
+                          this.pumpfunTokens.set(CA_ADDRESS, -1);
+                        } else if (
                           this.pumpfunTokens.get(CA_ADDRESS) === 2 ||
                           this.pumpfunTokens.get(CA_ADDRESS) === 3
                         ) {
@@ -229,7 +235,7 @@ export class WalletTracker {
                             signature
                           );
                           this.pumpfunTokens.set(CA_ADDRESS, 3);
-                        } else {
+                        } else if (this.pumpfunTokens.get(CA_ADDRESS) !== -1) {
                           this.pumpfunTokens.set(CA_ADDRESS, 1);
                         }
                       }
@@ -297,6 +303,11 @@ export class WalletTracker {
                       if (CA) {
                         const CA_ADDRESS = CA.toString();
                         if (
+                          CA_ADDRESS === MAIN_WALLET_ADDRESS_1 ||
+                          CA_ADDRESS === MAIN_WALLET_ADDRESS_2
+                        ) {
+                          this.pumpfunTokens.set(CA_ADDRESS, -1);
+                        } else if (
                           this.pumpfunTokens.get(CA_ADDRESS) === 1 ||
                           this.pumpfunTokens.get(CA_ADDRESS) === 3
                         ) {
@@ -312,7 +323,7 @@ export class WalletTracker {
                             signature
                           );
                           this.pumpfunTokens.set(CA_ADDRESS, 3);
-                        } else {
+                        } else if (this.pumpfunTokens.get(CA_ADDRESS) !== -1) {
                           this.pumpfunTokens.set(CA_ADDRESS, 2);
                         }
                       }
