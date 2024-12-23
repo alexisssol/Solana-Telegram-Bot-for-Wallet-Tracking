@@ -11,6 +11,8 @@ export const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || "";
 
 export const TRACKED_WALLETS_SIZE = 1000;
 
+export const MAX_BALANCE_CHANGE = 25
+
 // log file
 export const LOGFILE = "wallet_tracker.log";
 export const LOG_MAX_SIZE = 1024 * 1024; // 1MB in bytes
