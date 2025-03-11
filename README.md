@@ -2,7 +2,7 @@
 
 Solana Telegram bot for tracking wallet which interact with pump.fun
 
-https://drive.google.com/file/d/1M9n0K-FtxMMSh0bxTx-VMSwQGG8TrzrA/view?usp=drive_link
+https://github.com/user-attachments/assets/76e72faf-86cd-49d9-90ec-dbb0986bc2a2
 
 ## Main Features
 
@@ -28,7 +28,7 @@ https://drive.google.com/file/d/1M9n0K-FtxMMSh0bxTx-VMSwQGG8TrzrA/view?usp=drive
 1. clone the repository:
 
 ```
-https://github.com/rizzolib/Solana-Telegram-Wallet-for-Wallet-Tracking.git
+https://github.com/ilertha/Solana-Telegram-Wallet-for-Wallet-Tracking.git
 ```
 
 2. Go to the project directory:
@@ -62,3 +62,7 @@ npm start
 ## Version 1.0
 
 - 13/12/2024
+
+## Contact Info
+- telegram: @ilertha
+- X: @ilertha
