@@ -4,7 +4,7 @@ import { clearDB, clearLogs } from "./utils/utils";
 async function main() {
   const tracker = new WalletTracker();
   try {
-    // clearDB();
+    clearDB();
     clearLogs();
     await tracker.start();
   } catch (error) {
