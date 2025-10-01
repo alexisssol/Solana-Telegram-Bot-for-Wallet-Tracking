@@ -28,7 +28,7 @@ https://github.com/user-attachments/assets/76e72faf-86cd-49d9-90ec-dbb0986bc2a2
 1. clone the repository:
 
 ```
-https://github.com/ilertha/Solana-Telegram-Wallet-for-Wallet-Tracking.git
+https://github.com/alexisssol/Solana-Telegram-Wallet-for-Wallet-Tracking.git
 ```
 
 2. Go to the project directory:
@@ -64,5 +64,5 @@ npm start
 - 13/12/2024
 
 ## Contact Info
-- telegram: @ilertha
-- X: @ilertha
+- telegram: @alexisssol
+- X: @alexis_s_sol
